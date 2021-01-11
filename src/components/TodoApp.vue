@@ -5,101 +5,125 @@
       <input
         class="new-todo"
         placeholder="What needs to be done?"
-        autofocus
-        @keypress.enter="addTodoItem"
-        @blur="addTodoItem"
+        @change="addTodoItem"
+        v-focus
       />
     </header>
     <section class="main">
-      <input :id="`${id}ToggleAll`" class="toggle-all" type="checkbox" />
-      <label 
+      <input
+        class="toggle-all"
+        type="checkbox"
+        :id="`${id}ToggleAll`"
+        v-model="toggleAllInput"
+      />
+      <label
         :for="`${id}ToggleAll`"
         v-if="todoList.length > 0"
+        @click="switchStatusForAll()"
       >
         Mark all as complete
       </label>
-      <ul class="todo-list">
-        <TodoItem
-          v-for="(todo, index) in todoList"
-          :key="todo.id"
-          :id="todo.id"
-          :name="todo.name"
-          :status="todo.status"
-          :index=index
-
-          :removeTodoItem="removeTodoItem"
-         />
-      </ul>
+      <router-view
+        :todoList="todoList"
+        :removeTodoItem="removeTodoItem"
+        :editTodoItemByIndex="editTodoItemByIndex"
+      />
     </section>
-    <footer class="footer" 
-      v-if="todoList.length > 0" >
+    <footer class="footer" v-if="todoList.length > 0">
       <span class="todo-count">
-        <strong>{{uncompletedItemsCounter}}</strong> 
-        {{uncompletedItemsCounter === 1 ? 'item' : 'items'}} left
+        <strong>{{ uncompletedItemsCounter }}</strong>
+        {{ uncompletedItemsCounter === 1 ? "item" : "items" }} left
       </span>
       <ul class="filters">
         <li>
-          <a href="#/" class="selected">All</a>
+          <router-link to="/" :class="{ selected: currentURL.path === '/' }">
+            All
+          </router-link>
         </li>
         <li>
-          <a href="#/active">Active</a>
+          <router-link
+            to="/active"
+            :class="{ selected: currentURL.path === '/active' }"
+          >
+            Active
+          </router-link>
         </li>
         <li>
-          <a href="#/completed">Completed</a>
+          <router-link
+            to="/completed"
+            :class="{ selected: currentURL.path === '/completed' }"
+          >
+            Completed
+          </router-link>
         </li>
       </ul>
-      <button class="clear-completed">Clear completed</button>
+      <button
+        class="clear-completed"
+        v-if="uncompletedItemsCounter !== todoList.length"
+        @click="removeCompleteItems"
+      >
+        Clear completed
+      </button>
     </footer>
   </section>
 </template>
 
 <script>
-import TodoItem from "./TodoItem.vue";
+import TodoCreator from "../utils/TodoCreator";
+import { getLocalStorage, setLocalStorage } from "../utils/localStorage";
 export default {
   name: "TodoApp",
-  components: {
-    TodoItem,
-  },
   props: {
     dataID: String,
   },
   data() {
     return {
       id: this.dataID,
-      todoList: [],
+      todoList: getLocalStorage(this.dataID), // Array
+
+      toggleAllInput: false,
+      currentURL: this.$router.currentRoute,
     };
   },
-  methods: {
-    ToDoCreator(name, status = false, id = Number(new Date())) {
-      this.id = id;
-      this.name = name;
-      this.status = status;
+  computed: {
+    uncompletedItemsCounter() {
+      return this.todoList.filter((item) => !item.status).length;
     },
+  },
+  mounted() {
+    this.toggleAllInput = !this.uncompletedItemsCounter;
+  },
+  methods: {
     addTodoItem(event) {
       const inputValue = event.target.value.trim();
       if (inputValue) {
-        const todoItem = new this.ToDoCreator(inputValue);
+        const todoItem = new TodoCreator(inputValue);
         this.todoList.push(todoItem);
         event.target.value = "";
       }
     },
     removeTodoItem(index) {
-      this.todoList.splice(index, 1)
-      console.log('remove', index)
+      this.todoList.splice(index, 1);
     },
-  },
-  computed: {
-    uncompletedItemsCounter() {
-      return this.todoList.filter(item => !item.status).length
-    } 
+    removeCompleteItems() {
+      this.todoList = this.todoList.filter((item) => !item.status);
+    },
+    editTodoItemByIndex(index, property) {
+      this.todoList[index] = { ...this.todoList[index], ...property };
+    },
+    switchStatusForAll() {
+      this.todoList.forEach((item) => (item.status = !this.toggleAllInput));
+      this.$nextTick(() => (this.toggleAllInput = !this.toggleAllInput));
+    },
   },
   watch: {
-    todoList(value) {
-      console.log('TL', value)
+    todoList: {
+      deep: true,
+      handler(value) {
+        setLocalStorage(this.id, value);
+        this.toggleAllInput = !this.uncompletedItemsCounter;
+      },
     },
-    id() {
-      console.log(this)
-    }
-  }
+  },
 };
 </script>
