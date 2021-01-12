@@ -1,5 +1,5 @@
-<template>
-  <li
+<template >
+  <li v-if="!hidden"
     :class="{
       'completed': status,
       'editing': editable
@@ -10,25 +10,25 @@
         class="toggle" 
         type="checkbox"
         :checked="status"
-        @click="editTodoItemByIndex(index, {status: !status})"
+        @click="toggleStatus"
       />
       <label
-        @dblclick="setEditable"
+        @dblclick="setEditable(true)"
       >
         {{name}}
       </label>
       <button 
         class="destroy"
-        @click="removeTodoItem(index)"
+        @click="removeItem"
       ></button>
     </div>
     <input
       v-if="editable"
       class="edit"
-      :value="name"
-      @keypress.enter="editTodoHandler"
-      @blur="editTodoHandler"
-      v-focus
+      @keypress.enter="setEditable(false)"
+      @blur="setEditable(false)"
+      v-model.trim="internalName"
+      v-autofocus
     />
   </li>
 </template>
@@ -41,28 +41,38 @@ export default {
     name: String,
     status: Boolean,
     index: Number,
-
-    removeTodoItem: Function,
-    editTodoItemByIndex: Function,
+    hidden: Boolean
   },
   data() {
     return {
+      internalName: this.name,
       editable: false
     }
   },
   methods: {
-   setEditable() {
-     this.editable = true
+   setEditable(value) {
+     this.editable = value
    },
-   editTodoHandler(event) {
-     const inputValue = event.target.value.trim()
-     if (inputValue) {
-       this.editable = false
-       this.editTodoItemByIndex(this.index, {name: inputValue})
+   editTodoHandler() {
+     if(this.internalName) {
+       this.$emit('edit-item', this.index, {name: this.internalName})
      } else {
-       this.removeTodoItem(this.index)
+       this.removeItem()
      }
+   },
+   toggleStatus() {
+     this.$emit('edit-item', this.index, {status: !this.status})
+   },
+   removeItem() {
+     this.$emit('remove-item', this.index)
    }
+  },
+  watch: {
+    editable(value) {
+      if(!value) {
+        this.editTodoHandler()
+      }
+    }
   }
 }
 </script>
