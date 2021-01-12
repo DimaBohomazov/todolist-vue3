@@ -1,24 +1,14 @@
 <template>
-<div>
-  <TodoApp 
-    dataID="firstTodo"
+  <router-view 
+  dataID="first-todo"
   />
-  <!--<TodoApp 
-    dataID="secondTodo"
-   /> -->
-</div>
-  
 </template>
 
 <script>
-import TodoApp from "./components/TodoApp.vue";
 import './assets/styles/base.css'
 import './assets/styles/index.css'
 export default {
   name: "App",
-  components: {
-    TodoApp,
-  },
 };
 
 </script>

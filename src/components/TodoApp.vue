@@ -6,7 +6,7 @@
         class="new-todo"
         placeholder="What needs to be done?"
         @change="addTodoItem"
-        v-focus
+        v-autofocus
       />
     </header>
     <section class="main">
@@ -23,11 +23,20 @@
       >
         Mark all as complete
       </label>
-      <router-view
-        :todoList="todoList"
-        :removeTodoItem="removeTodoItem"
-        :editTodoItemByIndex="editTodoItemByIndex"
-      />
+      <ul class="todo-list">
+        <TodoItem
+          v-for="(todo, index) in displayedTodoList"
+          :key="todo.id"
+          :id="todo.id"
+          :name="todo.name"
+          :status="todo.status"
+          :index=index
+          :hidden="todo.hidden"
+          
+          @remove-item="removeTodoItem"
+          @edit-item="editTodoItemByIndex"
+        />
+      </ul>  
     </section>
     <footer class="footer" v-if="todoList.length > 0">
       <span class="todo-count">
@@ -70,17 +79,22 @@
 
 <script>
 import TodoCreator from "../utils/TodoCreator";
+import TodoItem from "./TodoItem";
 import { getLocalStorage, setLocalStorage } from "../utils/localStorage";
 export default {
   name: "TodoApp",
+   components: {
+    TodoItem
+  },
   props: {
     dataID: String,
   },
   data() {
     return {
       id: this.dataID,
-      todoList: getLocalStorage(this.dataID), // Array
+      todoList: [], // Array
 
+      displayedTodoList: [],
       toggleAllInput: false,
       currentURL: this.$router.currentRoute,
     };
@@ -89,9 +103,22 @@ export default {
     uncompletedItemsCounter() {
       return this.todoList.filter((item) => !item.status).length;
     },
+    filteredTodoList() {
+      if(this.currentURL.href === '/active') {
+        return this.todoList.map(item => item.status ? {...item, hidden: true} : item)
+      } else if (this.currentURL.href === '/completed') {
+        return this.todoList.map(item => !item.status ? {...item, hidden: true} : item)
+      } else {
+       return this.todoList
+      }
+    }
+  },
+  created() {
+    this.todoList = getLocalStorage(this.dataID)
   },
   mounted() {
-    this.toggleAllInput = !this.uncompletedItemsCounter;
+    this.toggleAllInput = !this.uncompletedItemsCounter
+    this.displayedTodoList = this.filteredTodoList
   },
   methods: {
     addTodoItem(event) {
@@ -122,8 +149,12 @@ export default {
       handler(value) {
         setLocalStorage(this.id, value);
         this.toggleAllInput = !this.uncompletedItemsCounter;
+        this.displayedTodoList = this.filteredTodoList
       },
     },
+    currentURL() {
+      this.displayedTodoList = this.filteredTodoList
+    }
   },
 };
 </script>
