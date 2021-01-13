@@ -13,11 +13,11 @@
       <input
         class="toggle-all"
         type="checkbox"
-        :id="`${id}ToggleAll`"
+        :id="`${dataID}ToggleAll`"
         v-model="toggleAllInput"
       />
       <label
-        :for="`${id}ToggleAll`"
+        :for="`${dataID}ToggleAll`"
         v-if="todoList.length > 0"
         @click="switchStatusForAll()"
       >
@@ -25,7 +25,7 @@
       </label>
       <ul class="todo-list">
         <TodoItem
-          v-for="(todo, index) in displayedTodoList"
+          v-for="(todo, index) in filteredTodoList"
           :key="todo.id"
           :id="todo.id"
           :name="todo.name"
@@ -78,6 +78,8 @@
 </template>
 
 <script>
+import {ref, watch, reactive, computed, nextTick, onMounted} from 'vue'
+import {useRouter} from 'vue-router'
 import TodoCreator from "../utils/TodoCreator";
 import TodoItem from "./TodoItem";
 import { getLocalStorage, setLocalStorage } from "../utils/localStorage";
@@ -89,72 +91,85 @@ export default {
   props: {
     dataID: String,
   },
-  data() {
-    return {
-      id: this.dataID,
-      todoList: [], // Array
+  setup(props) {
+    const {currentRoute} = useRouter()
+    // data()
+    const todoList = reactive(getLocalStorage(props.dataID))
+    const newTodoName = ref('')
+    const toggleAllInput = ref(false)
+    const currentURL = ref(currentRoute)
 
-      newTodoName: '',
-      displayedTodoList: [],
-      toggleAllInput: false,
-      currentURL: this.$router.currentRoute,
-    };
-  },
-  computed: {
-    uncompletedItemsCounter() {
-      return this.todoList.filter((item) => !item.status).length;
-    },
-    filteredTodoList() {
-      if(this.currentURL.href === '/active') {
-        return this.todoList.map(item => item.status ? {...item, hidden: true} : item)
-      } else if (this.currentURL.href === '/completed') {
-        return this.todoList.map(item => !item.status ? {...item, hidden: true} : item)
+    // computed
+     const uncompletedItemsCounter = computed(() =>
+       todoList.filter((item) => !item.status).length
+      )
+     const filteredTodoList = computed(() => {
+       const href = currentURL.value.href
+      if(href === '/active') {
+        return todoList.map(item => item.status ? {...item, hidden: true} : item)
+      } else if (href === '/completed') {
+        return todoList.map(item => !item.status ? {...item, hidden: true} : item)
       } else {
-       return this.todoList
+       return todoList
       }
+    })
+    
+    // methods
+    const addTodoItem = () => {
+      const todoItem = new TodoCreator(newTodoName.value);
+      todoList.push(todoItem)
     }
-  },
-  created() {
-    this.todoList = getLocalStorage(this.dataID)
-  },
-  mounted() {
-    this.toggleAllInput = !this.uncompletedItemsCounter
-    this.displayedTodoList = this.filteredTodoList
-  },
-  methods: {
-    addTodoItem() {
-      const todoItem = new TodoCreator(this.newTodoName);
-      this.todoList.push(todoItem);
-    },
-    removeTodoItem(index) {
-      this.todoList.splice(index, 1);
-    },
-    removeCompleteItems() {
-      this.todoList = this.todoList.filter((item) => !item.status);
-    },
-    editTodoItemByIndex(index, property) {
-      this.todoList[index] = { ...this.todoList[index], ...property };
-    },
-    switchStatusForAll() {
-      this.todoList.forEach((item) => (item.status = !this.toggleAllInput));
-      this.$nextTick(() => (this.toggleAllInput = !this.toggleAllInput));
-    },
-  },
-  watch: {
-    todoList: {
-      deep: true,
-      handler(value) {
-        setLocalStorage(this.id, value);
-        this.toggleAllInput = !this.uncompletedItemsCounter;
-        this.displayedTodoList = this.filteredTodoList
+    const removeTodoItem = (index) => {
+      todoList.splice(index, 1);
+    }
+    const removeCompleteItems = () => {
+      for(let i = 0; i < todoList.length; i++) {
+        if (todoList[i].status) {
+          todoList.splice(i, 1);
+          i--
+        }
+      }      
+    }
+    const editTodoItemByIndex = (index, property) => {
+      todoList[index] = { ...todoList[index], ...property };
+    }
+    const switchStatusForAll = () => {
+      todoList.forEach(item => item.status = !toggleAllInput.value);
+      nextTick(() => (toggleAllInput.value = !toggleAllInput.value));
+    }
+
+    //watch
+    watch(todoList, () => {
+      setLocalStorage(props.dataID, todoList)
+    })
+    watch(newTodoName, (value) => {
+      value && addTodoItem()
+      newTodoName.value = ''
+    })
+    watch(uncompletedItemsCounter, (value) => {
+      toggleAllInput.value = !value
+    })
+
+    // lifeCycles
+    onMounted(() => {
+       toggleAllInput.value = !uncompletedItemsCounter.value
       }
-    },
-    newTodoName(name) {
-      name && this.addTodoItem()
-      this.newTodoName = ''
-    },
-    currentURL() {
-      this.displayedTodoList = this.filteredTodoList
+    )
+
+    return { 
+      todoList,
+      newTodoName,
+      toggleAllInput,
+      currentURL,
+
+      uncompletedItemsCounter,
+      filteredTodoList,
+
+      addTodoItem,
+      removeTodoItem,
+      removeCompleteItems,
+      editTodoItemByIndex,
+      switchStatusForAll
     }
   },
 };
