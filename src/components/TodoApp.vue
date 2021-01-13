@@ -5,7 +5,7 @@
       <input
         class="new-todo"
         placeholder="What needs to be done?"
-        @change="addTodoItem"
+        v-model.trim.lazy="newTodoName"
         v-autofocus
       />
     </header>
@@ -94,6 +94,7 @@ export default {
       id: this.dataID,
       todoList: [], // Array
 
+      newTodoName: '',
       displayedTodoList: [],
       toggleAllInput: false,
       currentURL: this.$router.currentRoute,
@@ -121,13 +122,9 @@ export default {
     this.displayedTodoList = this.filteredTodoList
   },
   methods: {
-    addTodoItem(event) {
-      const inputValue = event.target.value.trim();
-      if (inputValue) {
-        const todoItem = new TodoCreator(inputValue);
-        this.todoList.push(todoItem);
-        event.target.value = "";
-      }
+    addTodoItem() {
+      const todoItem = new TodoCreator(this.newTodoName);
+      this.todoList.push(todoItem);
     },
     removeTodoItem(index) {
       this.todoList.splice(index, 1);
@@ -150,7 +147,11 @@ export default {
         setLocalStorage(this.id, value);
         this.toggleAllInput = !this.uncompletedItemsCounter;
         this.displayedTodoList = this.filteredTodoList
-      },
+      }
+    },
+    newTodoName(name) {
+      name && this.addTodoItem()
+      this.newTodoName = ''
     },
     currentURL() {
       this.displayedTodoList = this.filteredTodoList
