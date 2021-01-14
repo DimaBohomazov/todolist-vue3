@@ -25,8 +25,9 @@
     <input
       v-if="editable"
       class="edit"
-      @keypress.enter="setEditable(false)"
-      @blur="setEditable(false)"
+      @keypress.enter="editTodoHandler"
+      @keydown.esc="consoleChanges"
+      @blur="editTodoHandler"
       v-model.trim="internalName"
       v-autofocus
     />
@@ -34,6 +35,8 @@
 </template>
 
 <script>
+
+import {ref, toRefs} from 'vue'
 export default {
   name: 'TodoItem',
   props: {
@@ -43,36 +46,48 @@ export default {
     index: Number,
     hidden: Boolean
   },
-  data() {
-    return {
-      internalName: this.name,
-      editable: false
+  setup(props, {emit}) {
+    // props
+    const { name, status, index } = toRefs(props)
+
+    // data()
+    const internalName = ref(name.value)
+    const editable = ref(false)
+
+    // methods
+    const setEditable = (value) => {
+      editable.value = value
     }
-  },
-  methods: {
-   setEditable(value) {
-     this.editable = value
-   },
-   editTodoHandler() {
-     if(this.internalName) {
-       this.$emit('edit-item', this.index, {name: this.internalName})
-     } else {
-       this.removeItem()
-     }
-   },
-   toggleStatus() {
-     this.$emit('edit-item', this.index, {status: !this.status})
-   },
-   removeItem() {
-     this.$emit('remove-item', this.index)
-   }
-  },
-  watch: {
-    editable(value) {
-      if(!value) {
-        this.editTodoHandler()
+    const consoleChanges = () => {
+      setEditable(false)
+      internalName.value = name.value
+    }
+    const editTodoHandler = () => {
+      if (editable.value){
+        setEditable(false)
+        if(internalName.value) {
+          emit('edit-item', index.value, {name: internalName.value})
+        } else {
+          removeItem()
+        }
       }
     }
+    const removeItem = () => {
+     emit('remove-item', index.value)
+   }
+   const toggleStatus = () => {
+     emit('edit-item', index.value, {status: !status.value})
+   }
+
+   return {
+    editable,
+    internalName,
+    setEditable,
+    consoleChanges, 
+    editTodoHandler,
+    removeItem,
+    toggleStatus
+   }
   }
 }
 </script>

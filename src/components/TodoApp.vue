@@ -78,11 +78,14 @@
 </template>
 
 <script>
+
 import {ref, watch, reactive, computed, nextTick, onMounted} from 'vue'
 import {useRouter} from 'vue-router'
+import { getLocalStorage, setLocalStorage } from "../utils/localStorage";
+
 import TodoCreator from "../utils/TodoCreator";
 import TodoItem from "./TodoItem";
-import { getLocalStorage, setLocalStorage } from "../utils/localStorage";
+
 export default {
   name: "TodoApp",
    components: {
